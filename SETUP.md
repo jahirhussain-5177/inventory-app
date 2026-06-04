@@ -17,72 +17,42 @@ create table records (
   quantity integer default 1,
   availabilityStatus text default '',
   typeOfWork text,
-  workerNumber text,
   counterSaleNumber text,
   workOrderNumber text,
+  province text default '',
   received boolean default false,
   receivedDate text,
   createdDate text
 );
-
 ALTER TABLE records ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "anon_all" ON records FOR ALL USING (true) WITH CHECK (true);
 GRANT ALL ON records TO anon;
-```
 
-To add the new Counter Sale and Work Order columns (run this separately if you already created the table):
-
-```sql
-ALTER TABLE records ADD COLUMN IF NOT EXISTS counterSaleNumber text;
-ALTER TABLE records ADD COLUMN IF NOT EXISTS workOrderNumber text;
-```
-
-This creates the table and allows public read/write from your app.
-
-## 1b. Create users table for login
-
-In **SQL Editor**, run:
-
-```sql
 CREATE TABLE IF NOT EXISTS users (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   username text NOT NULL UNIQUE,
   password text NOT NULL,
   created_at timestamptz DEFAULT now()
 );
-
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "anon_select_users" ON users FOR SELECT USING (true);
 GRANT SELECT ON users TO anon;
-```
 
-Then insert a test user:
-
-```sql
 INSERT INTO users (username, password) VALUES ('admin', 'admin123');
-```
 
-## 1c. Create master data tables
-
-In **SQL Editor**, run:
-
-```sql
 CREATE TABLE IF NOT EXISTS master_models (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   name text NOT NULL UNIQUE,
   created_at timestamptz DEFAULT now()
 );
-
 CREATE TABLE IF NOT EXISTS master_provinces (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   name text NOT NULL UNIQUE,
   created_at timestamptz DEFAULT now()
 );
-
 ALTER TABLE master_models ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "anon_all" ON master_models FOR ALL USING (true) WITH CHECK (true);
 GRANT ALL ON master_models TO anon;
-
 ALTER TABLE master_provinces ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "anon_all" ON master_provinces FOR ALL USING (true) WITH CHECK (true);
 GRANT ALL ON master_provinces TO anon;
@@ -94,39 +64,23 @@ GRANT ALL ON master_provinces TO anon;
 2. Copy the **Project URL** (looks like `https://xxx.supabase.co`)
 3. Copy the **anon public** key (starts with **`eyJ...`** — not `sb_publishable_...`)
 
-## 3. Update index.html
+## 3. Update config
 
-Open `index.html` and replace the config block near the bottom:
-
-```html
-<script id="supabase-config" type="application/json">
-  {
-    "url": "https://wmyquirqggackykeulni.supabase.co",
-    "key": "PASTE_YOUR_ANON_KEY_HERE"
-  }
-</script>
-```
-
-The anon key starts with `eyJ` and is found at **Project Settings → API → anon public**.
+The Supabase URL and anon key are already set in `index.html` and `login.html` inside the `<script id="supabase-config">` block. If you ever need to change them, update both files.
 
 ## 4. Deploy to GitHub Pages
 
 1. Create a public GitHub repository (e.g. `inventory-app`)
-2. Delete the old `.git` folder if present: `rm -rf .git`
-3. Initialize git and push:
+2. Set the remote:
    ```bash
-   git init
-   git add .
-   git commit -m "Initial commit"
-   git branch -M main
-   git remote add origin https://github.com/YOUR_USERNAME/inventory-app.git
+   git remote set-url origin https://github.com/jahirhussain-5177/inventory-app.git
    git push -u origin main
    ```
-4. In your repo on GitHub → **Settings** → **Pages** → under "Branch" select `main` → **Save**
-5. Wait 1-2 minutes. Your app is at `https://YOUR_USERNAME.github.io/inventory-app/`
+3. In your repo on GitHub → **Settings** → **Pages** → under "Branch" select `main` → **Save**
+4. Wait 1-2 minutes. Your app is at `https://jahirhussain-5177.github.io/inventory-app/`
 
 ## 5. Install on mobile
 
-1. Open `https://YOUR_USERNAME.github.io/inventory-app/` in Chrome on Android
+1. Open the GitHub Pages URL in Chrome on Android
 2. You'll see an **Install** banner at the bottom, or tap the menu → **Add to Home screen**
 3. The app opens like a native app with teal icon
