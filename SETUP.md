@@ -79,19 +79,11 @@ INSERT INTO master_models (name) VALUES
   ('CMC Z7');
 
 INSERT INTO master_provinces (name) VALUES
-  ('Riyadh'),
-  ('Makkah'),
-  ('Madinah'),
-  ('Qasim'),
-  ('Eastern Province'),
-  ('Asir'),
-  ('Tabuk'),
-  ('Hail'),
-  ('Northern Borders'),
-  ('Jazan'),
-  ('Najran'),
-  ('Al-Bahah'),
-  ('Al-Jawf');
+  ('Dammam Branch'),
+  ('Dammam CPD-523'),
+  ('Jubail'),
+  ('Jeddah'),
+  ('Tabuk');
 
 ALTER TABLE master_models ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "anon_all" ON master_models FOR ALL USING (true) WITH CHECK (true);
