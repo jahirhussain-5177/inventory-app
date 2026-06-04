@@ -50,6 +50,49 @@ CREATE TABLE IF NOT EXISTS master_provinces (
   name text NOT NULL UNIQUE,
   created_at timestamptz DEFAULT now()
 );
+INSERT INTO master_models (name) VALUES
+  ('Falcon - E1'),
+  ('Falcon - E2'),
+  ('Falcon - E3'),
+  ('Falcon - E4'),
+  ('Falcon - E5'),
+  ('Falcon-JTAC/YANMAR'),
+  ('Falcon-Spheros/VALEO'),
+  ('FALCON NON-AC'),
+  ('FALCON KBAUTO'),
+  ('PARTNER'),
+  ('GAZL-JTAC'),
+  ('GAZL-VALEO'),
+  ('OYSTER-JTAC'),
+  ('OYSTER-VALEO'),
+  ('BOSS'),
+  ('TRUCK 1518'),
+  ('TRUCK 9016'),
+  ('TRUCK 1618'),
+  ('CMC Freezer van 1.2'),
+  ('CMC Freezer van 1.3'),
+  ('CMC Freezer van 1.5'),
+  ('CMC Panel Van 1.3'),
+  ('CMC Panel Van 1.5'),
+  ('CMC D260'),
+  ('CMC D270'),
+  ('CMC Z7');
+
+INSERT INTO master_provinces (name) VALUES
+  ('Riyadh'),
+  ('Makkah'),
+  ('Madinah'),
+  ('Qasim'),
+  ('Eastern Province'),
+  ('Asir'),
+  ('Tabuk'),
+  ('Hail'),
+  ('Northern Borders'),
+  ('Jazan'),
+  ('Najran'),
+  ('Al-Bahah'),
+  ('Al-Jawf');
+
 ALTER TABLE master_models ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "anon_all" ON master_models FOR ALL USING (true) WITH CHECK (true);
 GRANT ALL ON master_models TO anon;
