@@ -8,8 +8,11 @@ const UI = {
   masterModelPage: 1,
   masterProvincePage: 1,
 
+  _parts: [],
+  _editingPartIndex: -1,
+
   init() {
-    this.initMultiPart();
+    this.initPartAccumulator();
     this.setupSortHandlers();
     this.setupMobileAccordion();
     this._updateMasterPageSize();
@@ -19,153 +22,226 @@ const UI = {
     this.masterPageSize = window.innerWidth <= 768 ? 5 : 10;
   },
 
-  initMultiPart() {
-    this.addPartRow();
+  initPartAccumulator() {
+    var self = this;
 
-    document.getElementById('addPartBtn').addEventListener('click', () => {
-      this.addPartRow();
+    document.getElementById('addPartBtn').addEventListener('click', function() {
+      self.showPartEntry();
     });
 
-    document.getElementById('partsContainer').addEventListener('click', (e) => {
-      const btn = e.target.closest('.remove-part-btn');
-      if (btn) {
-        const row = btn.closest('.part-row');
-        const container = document.getElementById('partsContainer');
-        if (container.querySelectorAll('.part-row').length <= 1) {
-          this._clearPartRow(row);
-          return;
-        }
-        row.remove();
-        this._updatePartRowNumbers();
+    document.getElementById('entryAddBtn').addEventListener('click', function() {
+      if (self._editingPartIndex >= 0) {
+        self.updatePart(self._editingPartIndex);
+      } else {
+        self.addPart();
       }
     });
 
-    document.getElementById('partsContainer').addEventListener('change', (e) => {
-      const row = e.target.closest('.part-row');
-      if (!row) return;
-      if (e.target.classList.contains('part-typeOfWork')) {
-        this._togglePartWorkType(row, e.target.value);
-      }
-      if (e.target.classList.contains('part-availability')) {
-        this._togglePartProvince(row, e.target.value);
+    document.getElementById('entryCancelBtn').addEventListener('click', function() {
+      self._editingPartIndex = -1;
+      self.hidePartEntry();
+    });
+
+    document.getElementById('entryTypeOfWork').addEventListener('change', function() {
+      self._toggleEntryWorkType();
+    });
+
+    document.getElementById('entryAvailability').addEventListener('change', function() {
+      self._toggleEntryProvince();
+    });
+
+    document.getElementById('partsList').addEventListener('click', function(e) {
+      var btn = e.target.closest('button');
+      if (!btn) return;
+      var index = parseInt(btn.dataset.index, 10);
+      if (isNaN(index)) return;
+
+      if (btn.classList.contains('part-card-edit')) {
+        self.showPartEntry(self._parts[index], index);
+      } else if (btn.classList.contains('part-card-delete')) {
+        self.deletePart(index);
       }
     });
   },
 
-  addPartRow(data) {
-    const template = document.getElementById('partRowTemplate');
-    const clone = template.content.cloneNode(true);
-    const container = document.getElementById('partsContainer');
-    container.appendChild(clone);
-    this._updatePartRowNumbers();
-
-    const rows = container.querySelectorAll('.part-row');
-    const newRow = rows[rows.length - 1];
-    this._populatePartRowSelects(newRow);
+  showPartEntry(data, index) {
+    this._editingPartIndex = index >= 0 ? index : -1;
+    document.getElementById('partEntryTitle').textContent = index >= 0 ? 'Edit Part' : 'Enter Part Details';
+    document.getElementById('entryAddBtn').textContent = index >= 0 ? 'Update' : 'Add';
+    document.getElementById('partEntryForm').classList.remove('hidden');
+    document.getElementById('addPartBtn').classList.add('hidden');
 
     if (data) {
-      this._fillPartRow(newRow, data);
-    }
-    return newRow;
-  },
-
-  _updatePartRowNumbers() {
-    const rows = document.querySelectorAll('#partsContainer .part-row');
-    rows.forEach((row, i) => {
-      row.querySelector('.part-row-number').textContent = 'Part #' + (i + 1);
-      row.dataset.index = i;
-    });
-  },
-
-  _populatePartRowSelects(row) {
-    const modelSelect = row.querySelector('.part-model');
-    var models = MasterDB.getModels();
-    modelSelect.innerHTML = '<option value="">Select Model</option>';
-    for (var i = 0; i < models.length; i++) {
-      var opt = document.createElement('option');
-      opt.value = models[i].name;
-      opt.textContent = models[i].name;
-      modelSelect.appendChild(opt);
-    }
-
-    const provinceSelect = row.querySelector('.part-province');
-    var provinces = MasterDB.getProvinces();
-    provinceSelect.innerHTML = '<option value="">-- Select Province --</option>';
-    for (var i = 0; i < provinces.length; i++) {
-      var opt = document.createElement('option');
-      opt.value = provinces[i].name;
-      opt.textContent = provinces[i].name;
-      provinceSelect.appendChild(opt);
-    }
-  },
-
-  _fillPartRow(row, data) {
-    row.querySelector('.part-number').value = data.partNumber || '';
-
-    var nameInput = row.querySelector('.part-name');
-    nameInput.value = data.partName || '';
-
-    var modelSelect = row.querySelector('.part-model');
-    if (data.model) {
-      var modelExists = Array.from(modelSelect.options).some(function(o) { return o.value === data.model; });
-      if (!modelExists) {
-        var opt = document.createElement('option');
-        opt.value = data.model;
-        opt.textContent = data.model;
-        modelSelect.appendChild(opt);
+      document.getElementById('entryPartNumber').value = data.partNumber || '';
+      document.getElementById('entryPartName').value = data.partName || '';
+      var modelSelect = document.getElementById('entryModel');
+      if (data.model) {
+        var modelExists = Array.from(modelSelect.options).some(function(o) { return o.value === data.model; });
+        if (!modelExists) {
+          var opt = document.createElement('option');
+          opt.value = data.model;
+          opt.textContent = data.model;
+          modelSelect.appendChild(opt);
+        }
+        modelSelect.value = data.model;
       }
-      modelSelect.value = data.model;
-    }
-
-    row.querySelector('.part-quantity').value = data.quantity != null ? data.quantity : '';
-
-    var typeSelect = row.querySelector('.part-typeOfWork');
-    typeSelect.value = data.typeOfWork || '';
-    this._togglePartWorkType(row, typeSelect.value);
-
-    if (data.typeOfWork === 'Counter Sale') {
-      row.querySelector('.part-counterSaleNumber').value = data.counterSaleNumber || '';
-    } else if (data.typeOfWork === 'Work Order') {
-      row.querySelector('.part-workOrderNumber').value = data.workOrderNumber || '';
-    }
-
-    var availSelect = row.querySelector('.part-availability');
-    availSelect.value = data.availabilityStatus || '';
-    this._togglePartProvince(row, availSelect.value);
-
-    if (data.availabilityStatus === 'Inside KSA' && data.province) {
-      var provSelect = row.querySelector('.part-province');
-      var provExists = Array.from(provSelect.options).some(function(o) { return o.value === data.province; });
-      if (!provExists) {
-        var opt = document.createElement('option');
-        opt.value = data.province;
-        opt.textContent = data.province;
-        provSelect.appendChild(opt);
+      document.getElementById('entryQuantity').value = data.quantity != null ? data.quantity : '';
+      document.getElementById('entryTypeOfWork').value = data.typeOfWork || '';
+      this._toggleEntryWorkType();
+      if (data.typeOfWork === 'Counter Sale') {
+        document.getElementById('entryCounterSaleNumber').value = data.counterSaleNumber || '';
+      } else if (data.typeOfWork === 'Work Order') {
+        document.getElementById('entryWorkOrderNumber').value = data.workOrderNumber || '';
       }
-      provSelect.value = data.province;
+      document.getElementById('entryAvailability').value = data.availabilityStatus || '';
+      this._toggleEntryProvince();
+      if (data.availabilityStatus === 'Inside KSA' && data.province) {
+        var provSelect = document.getElementById('entryProvince');
+        var provExists = Array.from(provSelect.options).some(function(o) { return o.value === data.province; });
+        if (!provExists) {
+          var opt = document.createElement('option');
+          opt.value = data.province;
+          opt.textContent = data.province;
+          provSelect.appendChild(opt);
+        }
+        provSelect.value = data.province;
+      }
+    } else {
+      this.clearEntryForm();
+    }
+
+    document.getElementById('partEntryForm').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  },
+
+  hidePartEntry() {
+    document.getElementById('partEntryForm').classList.add('hidden');
+    document.getElementById('addPartBtn').classList.remove('hidden');
+    this._editingPartIndex = -1;
+    Validator.clearErrors();
+  },
+
+  clearEntryForm() {
+    document.getElementById('entryPartNumber').value = '';
+    document.getElementById('entryPartName').value = '';
+    document.getElementById('entryModel').value = '';
+    document.getElementById('entryQuantity').value = '';
+    document.getElementById('entryTypeOfWork').value = '';
+    document.getElementById('entryCounterSaleNumber').value = '';
+    document.getElementById('entryWorkOrderNumber').value = '';
+    document.getElementById('entryAvailability').value = '';
+    document.getElementById('entryProvince').value = '';
+    document.getElementById('entryProvinceCustom').value = '';
+    this._toggleEntryWorkType();
+    this._toggleEntryProvince();
+    Validator.clearErrors();
+  },
+
+  gatherEntryData() {
+    var typeOfWork = document.getElementById('entryTypeOfWork').value;
+    return {
+      partNumber: document.getElementById('entryPartNumber').value.trim(),
+      partName: document.getElementById('entryPartName').value.trim(),
+      model: document.getElementById('entryModel').value.trim(),
+      quantity: document.getElementById('entryQuantity').value === '' ? null : Number(document.getElementById('entryQuantity').value),
+      typeOfWork: typeOfWork,
+      counterSaleNumber: typeOfWork === 'Counter Sale' ? document.getElementById('entryCounterSaleNumber').value.trim() : '',
+      workOrderNumber: typeOfWork === 'Work Order' ? document.getElementById('entryWorkOrderNumber').value.trim() : '',
+      availabilityStatus: document.getElementById('entryAvailability').value,
+      province: document.getElementById('entryProvince').value
+    };
+  },
+
+  addPart() {
+    var data = this.gatherEntryData();
+    var errors = this._validateEntry(data);
+    if (errors.length > 0) {
+      UI.showNotification(errors[0], 'error');
+      return;
+    }
+    this._parts.push(data);
+    this.hidePartEntry();
+    this.renderPartsList();
+    this._updateRegisterBtn();
+  },
+
+  updatePart(index) {
+    var data = this.gatherEntryData();
+    var errors = this._validateEntry(data);
+    if (errors.length > 0) {
+      UI.showNotification(errors[0], 'error');
+      return;
+    }
+    this._parts[index] = data;
+    this.hidePartEntry();
+    this.renderPartsList();
+    this._updateRegisterBtn();
+  },
+
+  deletePart(index) {
+    this._parts.splice(index, 1);
+    this.renderPartsList();
+    this._updateRegisterBtn();
+  },
+
+  _validateEntry(data) {
+    var errs = [];
+    if (!data.partName) { errs.push('Part Name is required.'); return errs; }
+    if (!data.model) { errs.push('Model is required.'); return errs; }
+    if (data.quantity === null || data.quantity === '' || !Number.isInteger(Number(data.quantity)) || Number(data.quantity) < 1) {
+      errs.push('Quantity must be a positive integer.');
+      return errs;
+    }
+    if (!data.typeOfWork) { errs.push('Type of Work is required.'); return errs; }
+    if (data.availabilityStatus === 'Inside KSA' && !data.province) { errs.push('Province is required for Inside KSA.'); return errs; }
+    return errs;
+  },
+
+  renderPartsList() {
+    var container = document.getElementById('partsList');
+    if (this._parts.length === 0) {
+      container.innerHTML = '';
+      return;
+    }
+    var html = '';
+    for (var i = 0; i < this._parts.length; i++) {
+      var p = this._parts[i];
+      html += '<div class="part-card">';
+      html += '<div class="part-card-info"><strong>' + this._esc(p.partName) + '</strong>';
+      if (p.partNumber) html += ' <span class="part-card-partno">(' + this._esc(p.partNumber) + ')</span>';
+      html += ' <span class="part-card-qty">Qty: ' + p.quantity + '</span></div>';
+      html += '<div class="part-card-actions">';
+      html += '<button class="btn btn-small btn-edit part-card-edit" data-index="' + i + '" title="Edit">&#9998;</button> ';
+      html += '<button class="btn btn-small btn-delete part-card-delete" data-index="' + i + '" title="Delete">&#128465;</button>';
+      html += '</div></div>';
+    }
+    container.innerHTML = html;
+  },
+
+  _updateRegisterBtn() {
+    var btn = document.getElementById('saveBtn');
+    var count = this._parts.length;
+    var editId = document.getElementById('editId').value.trim();
+    if (editId) {
+      btn.textContent = 'Update Record';
+    } else {
+      btn.textContent = 'Register (' + count + ' part' + (count !== 1 ? 's' : '') + ')';
     }
   },
 
-  _clearPartRow(row) {
-    row.querySelectorAll('input').forEach(function(i) { i.value = ''; });
-    row.querySelectorAll('select').forEach(function(s) { s.selectedIndex = 0; });
-    this._togglePartWorkType(row, '');
-    this._togglePartProvince(row, '');
-  },
+  _toggleEntryWorkType() {
+    var val = document.getElementById('entryTypeOfWork').value;
+    var csGroup = document.getElementById('entryCsGroup');
+    var woGroup = document.getElementById('entryWoGroup');
+    var csInput = document.getElementById('entryCounterSaleNumber');
+    var woInput = document.getElementById('entryWorkOrderNumber');
 
-  _togglePartWorkType(row, value) {
-    var csGroup = row.querySelector('.part-cs-group');
-    var woGroup = row.querySelector('.part-wo-group');
-    var csInput = row.querySelector('.part-counterSaleNumber');
-    var woInput = row.querySelector('.part-workOrderNumber');
-
-    if (value === 'Counter Sale') {
+    if (val === 'Counter Sale') {
       csGroup.hidden = false;
       csGroup.style.display = 'flex';
       woGroup.hidden = true;
       woGroup.style.display = 'none';
       woInput.value = '';
-    } else if (value === 'Work Order') {
+    } else if (val === 'Work Order') {
       woGroup.hidden = false;
       woGroup.style.display = 'flex';
       csGroup.hidden = true;
@@ -181,10 +257,11 @@ const UI = {
     }
   },
 
-  _togglePartProvince(row, value) {
-    var provGroup = row.querySelector('.part-province-group');
-    var provInput = row.querySelector('.part-province');
-    if (value === 'Inside KSA') {
+  _toggleEntryProvince() {
+    var val = document.getElementById('entryAvailability').value;
+    var provGroup = document.getElementById('entryProvinceGroup');
+    var provInput = document.getElementById('entryProvince');
+    if (val === 'Inside KSA') {
       provGroup.hidden = false;
     } else {
       provGroup.hidden = true;
@@ -193,36 +270,26 @@ const UI = {
   },
 
   populateModelDropdown() {
+    var select = document.getElementById('entryModel');
     var models = MasterDB.getModels();
-    var selects = document.querySelectorAll('.part-model');
-    for (var s = 0; s < selects.length; s++) {
-      var sel = selects[s];
-      var currentVal = sel.value;
-      sel.innerHTML = '<option value="">Select Model</option>';
-      for (var i = 0; i < models.length; i++) {
-        var opt = document.createElement('option');
-        opt.value = models[i].name;
-        opt.textContent = models[i].name;
-        sel.appendChild(opt);
-      }
-      if (currentVal) sel.value = currentVal;
+    select.innerHTML = '<option value="">Select Model</option>';
+    for (var i = 0; i < models.length; i++) {
+      var opt = document.createElement('option');
+      opt.value = models[i].name;
+      opt.textContent = models[i].name;
+      select.appendChild(opt);
     }
   },
 
   populateProvinceDropdown() {
+    var select = document.getElementById('entryProvince');
     var provinces = MasterDB.getProvinces();
-    var selects = document.querySelectorAll('.part-province');
-    for (var s = 0; s < selects.length; s++) {
-      var sel = selects[s];
-      var currentVal = sel.value;
-      sel.innerHTML = '<option value="">-- Select Province --</option>';
-      for (var i = 0; i < provinces.length; i++) {
-        var opt = document.createElement('option');
-        opt.value = provinces[i].name;
-        opt.textContent = provinces[i].name;
-        sel.appendChild(opt);
-      }
-      if (currentVal) sel.value = currentVal;
+    select.innerHTML = '<option value="">-- Select Province --</option>';
+    for (var i = 0; i < provinces.length; i++) {
+      var opt = document.createElement('option');
+      opt.value = provinces[i].name;
+      opt.textContent = provinces[i].name;
+      select.appendChild(opt);
     }
   },
 
@@ -230,9 +297,20 @@ const UI = {
     document.getElementById('editId').value = record.id;
     document.getElementById('chassis').value = record.chassis;
 
-    var container = document.getElementById('partsContainer');
-    container.innerHTML = '';
-    this.addPartRow(record);
+    this._parts = [];
+    this._parts.push({
+      partNumber: record.partNumber || '',
+      partName: record.partName || '',
+      model: record.model || '',
+      quantity: record.quantity,
+      typeOfWork: record.typeOfWork || '',
+      counterSaleNumber: record.counterSaleNumber || '',
+      workOrderNumber: record.workOrderNumber || '',
+      availabilityStatus: record.availabilityStatus || '',
+      province: record.province || ''
+    });
+    this.renderPartsList();
+    this._updateRegisterBtn();
 
     document.getElementById('formTitle').textContent = 'Edit Record';
     document.getElementById('editBadge').classList.remove('hidden');
@@ -249,13 +327,15 @@ const UI = {
     document.getElementById('editId').value = '';
     document.getElementById('chassis').value = '';
 
-    var container = document.getElementById('partsContainer');
-    container.innerHTML = '';
-    this.addPartRow();
+    this._parts = [];
+    this._editingPartIndex = -1;
+    this.renderPartsList();
+    this.hidePartEntry();
+    this._updateRegisterBtn();
 
     document.getElementById('formTitle').textContent = 'Register Part';
     document.getElementById('editBadge').classList.add('hidden');
-    document.getElementById('saveBtn').textContent = 'Register';
+    document.getElementById('saveBtn').textContent = 'Register (0 parts)';
 
     Validator.clearErrors();
   },

@@ -304,8 +304,7 @@ const App = {
   handleFormSubmit() {
     const editId = document.getElementById('editId').value.trim();
     const chassis = document.getElementById('chassis').value.trim();
-    const allRecords = InventoryDB.getAll();
-    const partRows = document.querySelectorAll('#partsContainer .part-row');
+    const parts = UI._parts;
 
     if (!chassis) {
       UI.showNotification('Chassis is required.', 'error');
@@ -313,29 +312,15 @@ const App = {
       return;
     }
 
-    var self = this;
-    var errors = [];
-    var partsData = [];
-
-    partRows.forEach(function(row, idx) {
-      var data = self._gatherPartData(row);
-      var rowErrors = self._validatePartData(data, allRecords, editId);
-      if (rowErrors.length > 0) {
-        rowErrors.forEach(function(e) { errors.push({ msg: e, row: idx + 1 }); });
-      }
-      partsData.push(data);
-    });
-
-    if (errors.length > 0) {
-      var first = errors[0];
-      UI.showNotification('Part #' + first.row + ': ' + first.msg, 'error');
+    if (parts.length === 0) {
+      UI.showNotification('Add at least one part before registering.', 'error');
       return;
     }
 
-    Validator.clearErrors();
+    var self = this;
 
     if (editId) {
-      var record = partsData[0];
+      var record = parts[0];
       record.chassis = chassis;
       InventoryDB.update(editId, record).then(function() {
         UI.showNotification('Record updated successfully.', 'success');
@@ -345,7 +330,7 @@ const App = {
     } else {
       var promises = [];
       var now = this.getCurrentDateTime();
-      partsData.forEach(function(partData) {
+      parts.forEach(function(partData) {
         var id = InventoryDB.generateId();
         var record = {
           id: id,
@@ -367,63 +352,12 @@ const App = {
       });
 
       Promise.all(promises).then(function() {
-        UI.showNotification(partsData.length + ' record(s) added successfully.', 'success');
+        var count = parts.length;
+        UI.showNotification(count + ' record(s) added successfully.', 'success');
         UI.clearForm();
         self.refreshFromCloud();
       });
     }
-  },
-
-  _gatherPartData(row) {
-    var typeOfWork = row.querySelector('.part-typeOfWork').value;
-    return {
-      partNumber: row.querySelector('.part-number').value.trim(),
-      partName: row.querySelector('.part-name').value.trim(),
-      model: row.querySelector('.part-model').value.trim(),
-      quantity: row.querySelector('.part-quantity').value === '' ? null : Number(row.querySelector('.part-quantity').value),
-      typeOfWork: typeOfWork,
-      counterSaleNumber: typeOfWork === 'Counter Sale' ? row.querySelector('.part-counterSaleNumber').value.trim() : '',
-      workOrderNumber: typeOfWork === 'Work Order' ? row.querySelector('.part-workOrderNumber').value.trim() : '',
-      availabilityStatus: row.querySelector('.part-availability').value,
-      province: row.querySelector('.part-province').value
-    };
-  },
-
-  _validatePartData(data, existingRecords, editId) {
-    var errs = [];
-
-    if (data.partNumber) {
-      var dup = existingRecords.find(function(r) {
-        return r.partNumber.toLowerCase() === data.partNumber.toLowerCase() && r.id !== editId;
-      });
-      if (dup) {
-        errs.push('Part Number "' + data.partNumber + '" already exists.');
-      }
-    }
-
-    if (!data.partName) {
-      errs.push('Part Name is required.');
-    }
-
-    if (!data.model) {
-      errs.push('Model is required.');
-    }
-
-    if (data.quantity === null || data.quantity === undefined || data.quantity === '') {
-      errs.push('Quantity is required.');
-    } else if (!Number.isInteger(Number(data.quantity)) || Number(data.quantity) < 1) {
-      errs.push('Quantity must be a positive integer.');
-    }
-
-    if (!data.typeOfWork) {
-      errs.push('Type of Work is required.');
-    }
-
-    if (data.availabilityStatus === 'Inside KSA' && !data.province) {
-      errs.push('Province is required for Inside KSA.');
-    }
-
-    return errs;
   },
 
   handleEdit(id) {
