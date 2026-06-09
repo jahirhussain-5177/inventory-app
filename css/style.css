@@ -1782,6 +1782,8 @@ tbody tr {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
+  max-height: 220px;
+  overflow-y: auto;
 }
 
 .part-card {
