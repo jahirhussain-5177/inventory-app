@@ -714,6 +714,8 @@ tbody td {
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
   transition: background 0.15s;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 tbody tr:last-child td {
