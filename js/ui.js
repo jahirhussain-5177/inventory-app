@@ -70,6 +70,7 @@ const UI = {
     document.getElementById('entryAddBtn').textContent = index >= 0 ? 'Update' : 'Add';
     document.getElementById('partEntryForm').classList.remove('hidden');
     document.getElementById('addPartBtn').classList.add('hidden');
+    if (index >= 0) document.getElementById('partsList').classList.add('hidden');
 
     if (data) {
       document.getElementById('entryPartNumber').value = data.partNumber || '';
@@ -116,6 +117,7 @@ const UI = {
   hidePartEntry() {
     document.getElementById('partEntryForm').classList.add('hidden');
     document.getElementById('addPartBtn').classList.remove('hidden');
+    document.getElementById('partsList').classList.remove('hidden');
     this._editingPartIndex = -1;
     Validator.clearErrors();
   },
