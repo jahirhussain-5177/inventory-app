@@ -1,6 +1,6 @@
 const UI = {
   currentPage: 1,
-  pageSize: 14,
+  pageSize: window.innerWidth <= 768 ? 5 : 10,
   sortKey: 'createdDate',
   sortDir: 'desc',
   deleteTargetId: null,
