@@ -9,7 +9,7 @@ const UI = {
   masterProvincePage: 1,
 
   init() {
-    this.setupWorkTypeToggle();
+    this.initMultiPart();
     this.setupSortHandlers();
     this.setupMobileAccordion();
     this._updateMasterPageSize();
@@ -19,38 +19,245 @@ const UI = {
     this.masterPageSize = window.innerWidth <= 768 ? 5 : 10;
   },
 
-  setupWorkTypeToggle() {
-    const typeSelect = document.getElementById('typeOfWork');
-    const csGroup = document.getElementById('counterSaleGroup');
-    const woGroup = document.getElementById('workOrderGroup');
-    const csInput = document.getElementById('counterSaleNumber');
-    const woInput = document.getElementById('workOrderNumber');
+  initMultiPart() {
+    this.addPartRow();
 
-    const toggle = () => {
-      if (typeSelect.value === 'Counter Sale') {
-        csGroup.hidden = false;
-        csGroup.style.display = 'flex';
-        woGroup.hidden = true;
-        woGroup.style.display = 'none';
-        woInput.value = '';
-      } else if (typeSelect.value === 'Work Order') {
-        woGroup.hidden = false;
-        woGroup.style.display = 'flex';
-        csGroup.hidden = true;
-        csGroup.style.display = 'none';
-        csInput.value = '';
-      } else {
-        csGroup.hidden = true;
-        csGroup.style.display = 'none';
-        csInput.value = '';
-        woGroup.hidden = true;
-        woGroup.style.display = 'none';
-        woInput.value = '';
+    document.getElementById('addPartBtn').addEventListener('click', () => {
+      this.addPartRow();
+    });
+
+    document.getElementById('partsContainer').addEventListener('click', (e) => {
+      const btn = e.target.closest('.remove-part-btn');
+      if (btn) {
+        const row = btn.closest('.part-row');
+        const container = document.getElementById('partsContainer');
+        if (container.querySelectorAll('.part-row').length <= 1) {
+          this._clearPartRow(row);
+          return;
+        }
+        row.remove();
+        this._updatePartRowNumbers();
       }
-    };
+    });
 
-    typeSelect.addEventListener('change', toggle);
-    toggle();
+    document.getElementById('partsContainer').addEventListener('change', (e) => {
+      const row = e.target.closest('.part-row');
+      if (!row) return;
+      if (e.target.classList.contains('part-typeOfWork')) {
+        this._togglePartWorkType(row, e.target.value);
+      }
+      if (e.target.classList.contains('part-availability')) {
+        this._togglePartProvince(row, e.target.value);
+      }
+    });
+  },
+
+  addPartRow(data) {
+    const template = document.getElementById('partRowTemplate');
+    const clone = template.content.cloneNode(true);
+    const container = document.getElementById('partsContainer');
+    container.appendChild(clone);
+    this._updatePartRowNumbers();
+
+    const rows = container.querySelectorAll('.part-row');
+    const newRow = rows[rows.length - 1];
+    this._populatePartRowSelects(newRow);
+
+    if (data) {
+      this._fillPartRow(newRow, data);
+    }
+    return newRow;
+  },
+
+  _updatePartRowNumbers() {
+    const rows = document.querySelectorAll('#partsContainer .part-row');
+    rows.forEach((row, i) => {
+      row.querySelector('.part-row-number').textContent = 'Part #' + (i + 1);
+      row.dataset.index = i;
+    });
+  },
+
+  _populatePartRowSelects(row) {
+    const modelSelect = row.querySelector('.part-model');
+    var models = MasterDB.getModels();
+    modelSelect.innerHTML = '<option value="">Select Model</option>';
+    for (var i = 0; i < models.length; i++) {
+      var opt = document.createElement('option');
+      opt.value = models[i].name;
+      opt.textContent = models[i].name;
+      modelSelect.appendChild(opt);
+    }
+
+    const provinceSelect = row.querySelector('.part-province');
+    var provinces = MasterDB.getProvinces();
+    provinceSelect.innerHTML = '<option value="">-- Select Province --</option>';
+    for (var i = 0; i < provinces.length; i++) {
+      var opt = document.createElement('option');
+      opt.value = provinces[i].name;
+      opt.textContent = provinces[i].name;
+      provinceSelect.appendChild(opt);
+    }
+  },
+
+  _fillPartRow(row, data) {
+    row.querySelector('.part-number').value = data.partNumber || '';
+
+    var nameInput = row.querySelector('.part-name');
+    nameInput.value = data.partName || '';
+
+    var modelSelect = row.querySelector('.part-model');
+    if (data.model) {
+      var modelExists = Array.from(modelSelect.options).some(function(o) { return o.value === data.model; });
+      if (!modelExists) {
+        var opt = document.createElement('option');
+        opt.value = data.model;
+        opt.textContent = data.model;
+        modelSelect.appendChild(opt);
+      }
+      modelSelect.value = data.model;
+    }
+
+    row.querySelector('.part-quantity').value = data.quantity != null ? data.quantity : '';
+
+    var typeSelect = row.querySelector('.part-typeOfWork');
+    typeSelect.value = data.typeOfWork || '';
+    this._togglePartWorkType(row, typeSelect.value);
+
+    if (data.typeOfWork === 'Counter Sale') {
+      row.querySelector('.part-counterSaleNumber').value = data.counterSaleNumber || '';
+    } else if (data.typeOfWork === 'Work Order') {
+      row.querySelector('.part-workOrderNumber').value = data.workOrderNumber || '';
+    }
+
+    var availSelect = row.querySelector('.part-availability');
+    availSelect.value = data.availabilityStatus || '';
+    this._togglePartProvince(row, availSelect.value);
+
+    if (data.availabilityStatus === 'Inside KSA' && data.province) {
+      var provSelect = row.querySelector('.part-province');
+      var provExists = Array.from(provSelect.options).some(function(o) { return o.value === data.province; });
+      if (!provExists) {
+        var opt = document.createElement('option');
+        opt.value = data.province;
+        opt.textContent = data.province;
+        provSelect.appendChild(opt);
+      }
+      provSelect.value = data.province;
+    }
+  },
+
+  _clearPartRow(row) {
+    row.querySelectorAll('input').forEach(function(i) { i.value = ''; });
+    row.querySelectorAll('select').forEach(function(s) { s.selectedIndex = 0; });
+    this._togglePartWorkType(row, '');
+    this._togglePartProvince(row, '');
+  },
+
+  _togglePartWorkType(row, value) {
+    var csGroup = row.querySelector('.part-cs-group');
+    var woGroup = row.querySelector('.part-wo-group');
+    var csInput = row.querySelector('.part-counterSaleNumber');
+    var woInput = row.querySelector('.part-workOrderNumber');
+
+    if (value === 'Counter Sale') {
+      csGroup.hidden = false;
+      csGroup.style.display = 'flex';
+      woGroup.hidden = true;
+      woGroup.style.display = 'none';
+      woInput.value = '';
+    } else if (value === 'Work Order') {
+      woGroup.hidden = false;
+      woGroup.style.display = 'flex';
+      csGroup.hidden = true;
+      csGroup.style.display = 'none';
+      csInput.value = '';
+    } else {
+      csGroup.hidden = true;
+      csGroup.style.display = 'none';
+      csInput.value = '';
+      woGroup.hidden = true;
+      woGroup.style.display = 'none';
+      woInput.value = '';
+    }
+  },
+
+  _togglePartProvince(row, value) {
+    var provGroup = row.querySelector('.part-province-group');
+    var provInput = row.querySelector('.part-province');
+    if (value === 'Inside KSA') {
+      provGroup.hidden = false;
+    } else {
+      provGroup.hidden = true;
+      provInput.value = '';
+    }
+  },
+
+  populateModelDropdown() {
+    var models = MasterDB.getModels();
+    var selects = document.querySelectorAll('.part-model');
+    for (var s = 0; s < selects.length; s++) {
+      var sel = selects[s];
+      var currentVal = sel.value;
+      sel.innerHTML = '<option value="">Select Model</option>';
+      for (var i = 0; i < models.length; i++) {
+        var opt = document.createElement('option');
+        opt.value = models[i].name;
+        opt.textContent = models[i].name;
+        sel.appendChild(opt);
+      }
+      if (currentVal) sel.value = currentVal;
+    }
+  },
+
+  populateProvinceDropdown() {
+    var provinces = MasterDB.getProvinces();
+    var selects = document.querySelectorAll('.part-province');
+    for (var s = 0; s < selects.length; s++) {
+      var sel = selects[s];
+      var currentVal = sel.value;
+      sel.innerHTML = '<option value="">-- Select Province --</option>';
+      for (var i = 0; i < provinces.length; i++) {
+        var opt = document.createElement('option');
+        opt.value = provinces[i].name;
+        opt.textContent = provinces[i].name;
+        sel.appendChild(opt);
+      }
+      if (currentVal) sel.value = currentVal;
+    }
+  },
+
+  populateForm(record) {
+    document.getElementById('editId').value = record.id;
+    document.getElementById('chassis').value = record.chassis;
+
+    var container = document.getElementById('partsContainer');
+    container.innerHTML = '';
+    this.addPartRow(record);
+
+    document.getElementById('formTitle').textContent = 'Edit Record';
+    document.getElementById('editBadge').classList.remove('hidden');
+    document.getElementById('saveBtn').textContent = 'Update Record';
+
+    Validator.clearErrors();
+    if (window.matchMedia('(max-width: 768px)').matches) {
+      document.querySelector('.form-section.card').removeAttribute('data-collapsed');
+    }
+    document.getElementById('recordForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  },
+
+  clearForm() {
+    document.getElementById('editId').value = '';
+    document.getElementById('chassis').value = '';
+
+    var container = document.getElementById('partsContainer');
+    container.innerHTML = '';
+    this.addPartRow();
+
+    document.getElementById('formTitle').textContent = 'Register Part';
+    document.getElementById('editBadge').classList.add('hidden');
+    document.getElementById('saveBtn').textContent = 'Register';
+
+    Validator.clearErrors();
   },
 
   setupSortHandlers() {
@@ -122,105 +329,6 @@ const UI = {
         card.setAttribute('data-collapsed', '');
       }
     });
-  },
-
-  populateForm(record) {
-    document.getElementById('editId').value = record.id;
-    document.getElementById('partNumber').value = record.partNumber;
-    document.getElementById('partName').value = record.partName;
-    var modelSelect = document.getElementById('model');
-    if (record.model) {
-      var modelExists = Array.from(modelSelect.options).some(function(o) { return o.value === record.model; });
-      if (!modelExists) {
-        var opt = document.createElement('option');
-        opt.value = record.model;
-        opt.textContent = record.model;
-        modelSelect.appendChild(opt);
-      }
-      modelSelect.value = record.model;
-    } else {
-      modelSelect.value = '';
-    }
-    document.getElementById('quantity').value = record.quantity;
-    document.getElementById('chassis').value = record.chassis;
-    const csGroup = document.getElementById('counterSaleGroup');
-    const woGroup = document.getElementById('workOrderGroup');
-    const csInput = document.getElementById('counterSaleNumber');
-    const woInput = document.getElementById('workOrderNumber');
-    document.getElementById('typeOfWork').value = record.typeOfWork;
-    if (record.typeOfWork === 'Counter Sale') {
-      csGroup.hidden = false;
-      csGroup.style.display = 'flex';
-      csInput.value = record.counterSaleNumber || '';
-      woGroup.hidden = true;
-      woGroup.style.display = 'none';
-      woInput.value = '';
-    } else if (record.typeOfWork === 'Work Order') {
-      woGroup.hidden = false;
-      woGroup.style.display = 'flex';
-      woInput.value = record.workOrderNumber || '';
-      csGroup.hidden = true;
-      csGroup.style.display = 'none';
-      csInput.value = '';
-    } else {
-      csGroup.hidden = true;
-      csGroup.style.display = 'none';
-      csInput.value = '';
-      woGroup.hidden = true;
-      woGroup.style.display = 'none';
-      woInput.value = '';
-    }
-    document.getElementById('availabilityStatus').value = record.availabilityStatus || '';
-    const provinceGroup = document.getElementById('provinceGroup');
-      const provinceInput = document.getElementById('province');
-      if (record.availabilityStatus === 'Inside KSA') {
-        provinceGroup.hidden = false;
-        if (record.province) {
-          var provExists = Array.from(provinceInput.options).some(function(o) { return o.value === record.province; });
-          if (!provExists) {
-            var opt = document.createElement('option');
-            opt.value = record.province;
-            opt.textContent = record.province;
-            provinceInput.appendChild(opt);
-          }
-          provinceInput.value = record.province;
-        } else {
-          provinceInput.value = '';
-        }
-      } else {
-        provinceGroup.hidden = true;
-        provinceInput.value = '';
-      }
-
-    document.getElementById('formTitle').textContent = 'Edit Record';
-    document.getElementById('editBadge').classList.remove('hidden');
-    document.getElementById('saveBtn').textContent = 'Update Record';
-
-    Validator.clearErrors();
-    if (window.matchMedia('(max-width: 768px)').matches) {
-      document.querySelector('.form-section.card').removeAttribute('data-collapsed');
-    }
-    document.getElementById('recordForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
-  },
-
-  clearForm() {
-    document.getElementById('editId').value = '';
-    document.getElementById('recordForm').reset();
-    document.getElementById('counterSaleGroup').hidden = true;
-    document.getElementById('counterSaleGroup').style.display = 'none';
-    document.getElementById('workOrderGroup').hidden = true;
-    document.getElementById('workOrderGroup').style.display = 'none';
-
-    document.getElementById('formTitle').textContent = 'Register Part';
-    document.getElementById('editBadge').classList.add('hidden');
-    document.getElementById('saveBtn').textContent = 'Register';
-
-    document.getElementById('typeOfWork').value = '';
-    document.getElementById('availabilityStatus').value = '';
-    document.getElementById('provinceGroup').hidden = true;
-    document.getElementById('province').value = '';
-
-    Validator.clearErrors();
   },
 
   renderTable(records) {
@@ -393,32 +501,6 @@ const UI = {
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
-  },
-
-  populateModelDropdown() {
-    var select = document.getElementById('model');
-    var currentVal = select.value;
-    var models = MasterDB.getModels();
-    select.innerHTML = '<option value="">Select Model</option>';
-    for (var i = 0; i < models.length; i++) {
-      var opt = document.createElement('option');
-      opt.value = models[i].name;
-      opt.textContent = models[i].name;
-      select.appendChild(opt);
-    }
-    if (currentVal) select.value = currentVal;
-  },
-
-  populateProvinceDropdown() {
-    var select = document.getElementById('province');
-    var currentVal = select.value;
-    var provinces = MasterDB.getProvinces();
-    var html = '<option value="">-- Select Province --</option>';
-    for (var i = 0; i < provinces.length; i++) {
-      html += '<option value="' + this._esc(provinces[i].name) + '">' + this._esc(provinces[i].name) + '</option>';
-    }
-    select.innerHTML = html;
-    if (currentVal) select.value = currentVal;
   },
 
   renderMasterTables() {

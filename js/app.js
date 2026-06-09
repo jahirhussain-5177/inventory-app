@@ -101,14 +101,6 @@ const App = {
       }
     });
 
-    document.getElementById('availabilityStatus').addEventListener('change', () => {
-      App.toggleProvinceField();
-    });
-
-    document.getElementById('province').addEventListener('change', () => {
-      App.toggleProvinceCustom();
-    });
-
     document.getElementById('actionRequiredBtn').addEventListener('click', () => {
       this.actionRequiredFilter = !this.actionRequiredFilter;
       if (this.actionRequiredFilter) {
@@ -311,67 +303,127 @@ const App = {
 
   handleFormSubmit() {
     const editId = document.getElementById('editId').value.trim();
-    const record = this.gatherFormData();
+    const chassis = document.getElementById('chassis').value.trim();
+    const allRecords = InventoryDB.getAll();
+    const partRows = document.querySelectorAll('#partsContainer .part-row');
 
-    const existingRecords = InventoryDB.getAll();
-    const validation = Validator.validate(record, existingRecords, editId);
+    if (!chassis) {
+      UI.showNotification('Chassis is required.', 'error');
+      document.getElementById('chassis').focus();
+      return;
+    }
 
-    if (!validation.isValid) {
-      Validator.showFieldErrors(validation.errors);
+    var self = this;
+    var errors = [];
+    var partsData = [];
+
+    partRows.forEach(function(row, idx) {
+      var data = self._gatherPartData(row);
+      var rowErrors = self._validatePartData(data, allRecords, editId);
+      if (rowErrors.length > 0) {
+        rowErrors.forEach(function(e) { errors.push({ msg: e, row: idx + 1 }); });
+      }
+      partsData.push(data);
+    });
+
+    if (errors.length > 0) {
+      var first = errors[0];
+      UI.showNotification('Part #' + first.row + ': ' + first.msg, 'error');
       return;
     }
 
     Validator.clearErrors();
 
-    var self = this;
     if (editId) {
+      var record = partsData[0];
+      record.chassis = chassis;
       InventoryDB.update(editId, record).then(function() {
         UI.showNotification('Record updated successfully.', 'success');
         UI.clearForm();
         self.refreshFromCloud();
       });
     } else {
-      record.id = InventoryDB.generateId();
-      record.createdDate = this.getCurrentDateTime();
-      record.received = false;
-      InventoryDB.add(record).then(function() {
-        UI.showNotification('Record added successfully.', 'success');
+      var promises = [];
+      var now = this.getCurrentDateTime();
+      partsData.forEach(function(partData) {
+        var id = InventoryDB.generateId();
+        var record = {
+          id: id,
+          chassis: chassis,
+          partNumber: partData.partNumber,
+          partName: partData.partName,
+          model: partData.model,
+          quantity: partData.quantity,
+          typeOfWork: partData.typeOfWork,
+          counterSaleNumber: partData.counterSaleNumber,
+          workOrderNumber: partData.workOrderNumber,
+          availabilityStatus: partData.availabilityStatus,
+          province: partData.province,
+          createdDate: now,
+          received: false,
+          receivedDate: ''
+        };
+        promises.push(InventoryDB.add(record));
+      });
+
+      Promise.all(promises).then(function() {
+        UI.showNotification(partsData.length + ' record(s) added successfully.', 'success');
         UI.clearForm();
         self.refreshFromCloud();
       });
     }
   },
 
-  gatherFormData() {
-    var typeOfWork = document.getElementById('typeOfWork').value;
+  _gatherPartData(row) {
+    var typeOfWork = row.querySelector('.part-typeOfWork').value;
     return {
-      partNumber: document.getElementById('partNumber').value.trim(),
-      partName: document.getElementById('partName').value.trim(),
-      model: document.getElementById('model').value.trim(),
-      quantity: document.getElementById('quantity').value === '' ? null : Number(document.getElementById('quantity').value),
-      chassis: document.getElementById('chassis').value.trim(),
+      partNumber: row.querySelector('.part-number').value.trim(),
+      partName: row.querySelector('.part-name').value.trim(),
+      model: row.querySelector('.part-model').value.trim(),
+      quantity: row.querySelector('.part-quantity').value === '' ? null : Number(row.querySelector('.part-quantity').value),
       typeOfWork: typeOfWork,
-      counterSaleNumber: typeOfWork === 'Counter Sale' ? document.getElementById('counterSaleNumber').value.trim() : '',
-      workOrderNumber: typeOfWork === 'Work Order' ? document.getElementById('workOrderNumber').value.trim() : '',
-      availabilityStatus: document.getElementById('availabilityStatus').value,
-      province: document.getElementById('province').value
+      counterSaleNumber: typeOfWork === 'Counter Sale' ? row.querySelector('.part-counterSaleNumber').value.trim() : '',
+      workOrderNumber: typeOfWork === 'Work Order' ? row.querySelector('.part-workOrderNumber').value.trim() : '',
+      availabilityStatus: row.querySelector('.part-availability').value,
+      province: row.querySelector('.part-province').value
     };
   },
 
-  toggleProvinceField() {
-    const val = document.getElementById('availabilityStatus').value;
-    const group = document.getElementById('provinceGroup');
-    if (val === 'Inside KSA') {
-      group.hidden = false;
-    } else {
-      group.hidden = true;
-      document.getElementById('province').value = '';
-    }
-  },
+  _validatePartData(data, existingRecords, editId) {
+    var errs = [];
 
-  toggleProvinceCustom() {
-    document.getElementById('provinceCustom').hidden = true;
-    document.getElementById('provinceCustom').value = '';
+    if (data.partNumber) {
+      var dup = existingRecords.find(function(r) {
+        return r.partNumber.toLowerCase() === data.partNumber.toLowerCase() && r.id !== editId;
+      });
+      if (dup) {
+        errs.push('Part Number "' + data.partNumber + '" already exists.');
+      }
+    }
+
+    if (!data.partName) {
+      errs.push('Part Name is required.');
+    }
+
+    if (!data.model) {
+      errs.push('Model is required.');
+    }
+
+    if (data.quantity === null || data.quantity === undefined || data.quantity === '') {
+      errs.push('Quantity is required.');
+    } else if (!Number.isInteger(Number(data.quantity)) || Number(data.quantity) < 1) {
+      errs.push('Quantity must be a positive integer.');
+    }
+
+    if (!data.typeOfWork) {
+      errs.push('Type of Work is required.');
+    }
+
+    if (data.availabilityStatus === 'Inside KSA' && !data.province) {
+      errs.push('Province is required for Inside KSA.');
+    }
+
+    return errs;
   },
 
   handleEdit(id) {
@@ -430,8 +482,8 @@ const App = {
     if (!record) return;
     var self = this;
     UI.showConfirmDialog(
-      `Delete record "${record.partNumber} - ${record.partName}"?`,
-      () => {
+      'Delete record "' + (record.partNumber || '') + ' - ' + record.partName + '"?',
+      function() {
         InventoryDB.delete(id).then(function() {
           UI.showNotification('Record deleted.', 'success');
           self.refreshFromCloud();
@@ -514,7 +566,7 @@ const App = {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `inventory-${this.getCurrentDate()}.xls`;
+    a.download = 'inventory-' + this.getCurrentDate() + '.xls';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -524,7 +576,7 @@ const App = {
 
   getCurrentDate() {
     const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    return now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
   },
 
   getCurrentDateTime() {
@@ -535,7 +587,7 @@ const App = {
     const h = String(now.getHours()).padStart(2, '0');
     const min = String(now.getMinutes()).padStart(2, '0');
     const s = String(now.getSeconds()).padStart(2, '0');
-    return `${y}-${m}-${d} ${h}:${min}:${s}`;
+    return y + '-' + m + '-' + d + ' ' + h + ':' + min + ':' + s;
   }
 };
 
