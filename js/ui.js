@@ -296,6 +296,8 @@ const UI = {
   },
 
   populateForm(record) {
+    this.hidePartEntry();
+    this.clearEntryForm();
     document.getElementById('editId').value = record.id;
     document.getElementById('chassis').value = record.chassis;
     document.getElementById('chassis').setAttribute('readonly', 'readonly');
