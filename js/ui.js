@@ -279,6 +279,8 @@ const UI = {
     } else if (record.typeOfWork === 'Work Order') {
       document.getElementById('workOrderNumber').value = record.workOrderNumber || '';
     }
+    document.getElementById('model').disabled = true;
+    document.getElementById('typeOfWork').disabled = true;
 
     this._parts = [];
     this._parts.push({
@@ -312,6 +314,8 @@ const UI = {
     document.getElementById('counterSaleNumber').value = '';
     document.getElementById('workOrderNumber').value = '';
     this._toggleWorkType();
+    document.getElementById('model').disabled = false;
+    document.getElementById('typeOfWork').disabled = false;
 
     this._parts = [];
     this._editingPartIndex = -1;
