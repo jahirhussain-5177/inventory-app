@@ -34,6 +34,7 @@
 html {
   font-size: 15px;
   scroll-behavior: smooth;
+  overflow-x: hidden;
 }
 
 body {
@@ -43,6 +44,7 @@ body {
   line-height: 1.5;
   min-height: 100vh;
   transition: background 0.3s, color 0.3s;
+  overflow-x: hidden;
 }
 
 .hidden {
@@ -100,6 +102,10 @@ body {
 
 .layout-left .form-grid .col-full {
   grid-column: 1 / -1;
+}
+
+.layout-right {
+  min-width: 0;
 }
 
 .layout-right .search-filter-section {
