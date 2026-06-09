@@ -298,6 +298,7 @@ const UI = {
   populateForm(record) {
     document.getElementById('editId').value = record.id;
     document.getElementById('chassis').value = record.chassis;
+    document.getElementById('chassis').setAttribute('readonly', 'readonly');
 
     this._parts = [];
     this._parts.push({
@@ -328,6 +329,7 @@ const UI = {
   clearForm() {
     document.getElementById('editId').value = '';
     document.getElementById('chassis').value = '';
+    document.getElementById('chassis').removeAttribute('readonly');
 
     this._parts = [];
     this._editingPartIndex = -1;
