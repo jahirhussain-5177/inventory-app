@@ -290,6 +290,7 @@ const UI = {
     });
     this.renderPartsList();
     this._updateRegisterBtn();
+    document.getElementById('addPartBtn').classList.add('hidden');
 
     document.getElementById('formTitle').textContent = 'Edit Record';
     document.getElementById('editBadge').classList.remove('hidden');
@@ -321,6 +322,7 @@ const UI = {
     document.getElementById('formTitle').textContent = 'Register Part';
     document.getElementById('editBadge').classList.add('hidden');
     document.getElementById('saveBtn').textContent = 'Register (0 parts)';
+    document.getElementById('addPartBtn').classList.remove('hidden');
 
     Validator.clearErrors();
   },
