@@ -42,8 +42,8 @@ const UI = {
       self.hidePartEntry();
     });
 
-    document.getElementById('entryTypeOfWork').addEventListener('change', function() {
-      self._toggleEntryWorkType();
+    document.getElementById('typeOfWork').addEventListener('change', function() {
+      self._toggleWorkType();
     });
 
     document.getElementById('entryAvailability').addEventListener('change', function() {
@@ -75,25 +75,7 @@ const UI = {
     if (data) {
       document.getElementById('entryPartNumber').value = data.partNumber || '';
       document.getElementById('entryPartName').value = data.partName || '';
-      var modelSelect = document.getElementById('entryModel');
-      if (data.model) {
-        var modelExists = Array.from(modelSelect.options).some(function(o) { return o.value === data.model; });
-        if (!modelExists) {
-          var opt = document.createElement('option');
-          opt.value = data.model;
-          opt.textContent = data.model;
-          modelSelect.appendChild(opt);
-        }
-        modelSelect.value = data.model;
-      }
       document.getElementById('entryQuantity').value = data.quantity != null ? data.quantity : '';
-      document.getElementById('entryTypeOfWork').value = data.typeOfWork || '';
-      this._toggleEntryWorkType();
-      if (data.typeOfWork === 'Counter Sale') {
-        document.getElementById('entryCounterSaleNumber').value = data.counterSaleNumber || '';
-      } else if (data.typeOfWork === 'Work Order') {
-        document.getElementById('entryWorkOrderNumber').value = data.workOrderNumber || '';
-      }
       document.getElementById('entryAvailability').value = data.availabilityStatus || '';
       this._toggleEntryProvince();
       if (data.availabilityStatus === 'Inside KSA' && data.province) {
@@ -125,29 +107,19 @@ const UI = {
   clearEntryForm() {
     document.getElementById('entryPartNumber').value = '';
     document.getElementById('entryPartName').value = '';
-    document.getElementById('entryModel').value = '';
     document.getElementById('entryQuantity').value = '';
-    document.getElementById('entryTypeOfWork').value = '';
-    document.getElementById('entryCounterSaleNumber').value = '';
-    document.getElementById('entryWorkOrderNumber').value = '';
     document.getElementById('entryAvailability').value = '';
     document.getElementById('entryProvince').value = '';
     document.getElementById('entryProvinceCustom').value = '';
-    this._toggleEntryWorkType();
     this._toggleEntryProvince();
     Validator.clearErrors();
   },
 
   gatherEntryData() {
-    var typeOfWork = document.getElementById('entryTypeOfWork').value;
     return {
       partNumber: document.getElementById('entryPartNumber').value.trim(),
       partName: document.getElementById('entryPartName').value.trim(),
-      model: document.getElementById('entryModel').value.trim(),
       quantity: document.getElementById('entryQuantity').value === '' ? null : Number(document.getElementById('entryQuantity').value),
-      typeOfWork: typeOfWork,
-      counterSaleNumber: typeOfWork === 'Counter Sale' ? document.getElementById('entryCounterSaleNumber').value.trim() : '',
-      workOrderNumber: typeOfWork === 'Work Order' ? document.getElementById('entryWorkOrderNumber').value.trim() : '',
       availabilityStatus: document.getElementById('entryAvailability').value,
       province: document.getElementById('entryProvince').value
     };
@@ -188,12 +160,10 @@ const UI = {
   _validateEntry(data) {
     var errs = [];
     if (!data.partName) { errs.push('Part Name is required.'); return errs; }
-    if (!data.model) { errs.push('Model is required.'); return errs; }
     if (data.quantity === null || data.quantity === '' || !Number.isInteger(Number(data.quantity)) || Number(data.quantity) < 1) {
       errs.push('Quantity must be a positive integer.');
       return errs;
     }
-    if (!data.typeOfWork) { errs.push('Type of Work is required.'); return errs; }
     if (data.availabilityStatus === 'Inside KSA' && !data.province) { errs.push('Province is required for Inside KSA.'); return errs; }
     return errs;
   },
@@ -230,12 +200,12 @@ const UI = {
     }
   },
 
-  _toggleEntryWorkType() {
-    var val = document.getElementById('entryTypeOfWork').value;
-    var csGroup = document.getElementById('entryCsGroup');
-    var woGroup = document.getElementById('entryWoGroup');
-    var csInput = document.getElementById('entryCounterSaleNumber');
-    var woInput = document.getElementById('entryWorkOrderNumber');
+  _toggleWorkType() {
+    var val = document.getElementById('typeOfWork').value;
+    var csGroup = document.getElementById('csGroup');
+    var woGroup = document.getElementById('woGroup');
+    var csInput = document.getElementById('counterSaleNumber');
+    var woInput = document.getElementById('workOrderNumber');
 
     if (val === 'Counter Sale') {
       csGroup.hidden = false;
@@ -272,7 +242,7 @@ const UI = {
   },
 
   populateModelDropdown() {
-    var select = document.getElementById('entryModel');
+    var select = document.getElementById('model');
     var models = MasterDB.getModels();
     select.innerHTML = '<option value="">Select Model</option>';
     for (var i = 0; i < models.length; i++) {
@@ -301,16 +271,20 @@ const UI = {
     document.getElementById('editId').value = record.id;
     document.getElementById('chassis').value = record.chassis;
     document.getElementById('chassis').setAttribute('readonly', 'readonly');
+    document.getElementById('model').value = record.model || '';
+    document.getElementById('typeOfWork').value = record.typeOfWork || '';
+    this._toggleWorkType();
+    if (record.typeOfWork === 'Counter Sale') {
+      document.getElementById('counterSaleNumber').value = record.counterSaleNumber || '';
+    } else if (record.typeOfWork === 'Work Order') {
+      document.getElementById('workOrderNumber').value = record.workOrderNumber || '';
+    }
 
     this._parts = [];
     this._parts.push({
       partNumber: record.partNumber || '',
       partName: record.partName || '',
-      model: record.model || '',
       quantity: record.quantity,
-      typeOfWork: record.typeOfWork || '',
-      counterSaleNumber: record.counterSaleNumber || '',
-      workOrderNumber: record.workOrderNumber || '',
       availabilityStatus: record.availabilityStatus || '',
       province: record.province || ''
     });
@@ -332,6 +306,11 @@ const UI = {
     document.getElementById('editId').value = '';
     document.getElementById('chassis').value = '';
     document.getElementById('chassis').removeAttribute('readonly');
+    document.getElementById('model').value = '';
+    document.getElementById('typeOfWork').value = '';
+    document.getElementById('counterSaleNumber').value = '';
+    document.getElementById('workOrderNumber').value = '';
+    this._toggleWorkType();
 
     this._parts = [];
     this._editingPartIndex = -1;

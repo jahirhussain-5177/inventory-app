@@ -304,11 +304,25 @@ const App = {
   handleFormSubmit() {
     const editId = document.getElementById('editId').value.trim();
     const chassis = document.getElementById('chassis').value.trim();
+    const model = document.getElementById('model').value.trim();
+    const typeOfWork = document.getElementById('typeOfWork').value;
+    const counterSaleNumber = typeOfWork === 'Counter Sale' ? document.getElementById('counterSaleNumber').value.trim() : '';
+    const workOrderNumber = typeOfWork === 'Work Order' ? document.getElementById('workOrderNumber').value.trim() : '';
     const parts = UI._parts;
 
     if (!chassis) {
       UI.showNotification('Chassis is required.', 'error');
       document.getElementById('chassis').focus();
+      return;
+    }
+    if (!model) {
+      UI.showNotification('Model is required.', 'error');
+      document.getElementById('model').focus();
+      return;
+    }
+    if (!typeOfWork) {
+      UI.showNotification('Type of Work is required.', 'error');
+      document.getElementById('typeOfWork').focus();
       return;
     }
 
@@ -322,6 +336,10 @@ const App = {
     if (editId) {
       var record = parts[0];
       record.chassis = chassis;
+      record.model = model;
+      record.typeOfWork = typeOfWork;
+      record.counterSaleNumber = counterSaleNumber;
+      record.workOrderNumber = workOrderNumber;
       InventoryDB.update(editId, record).then(function() {
         UI.showNotification('Record updated successfully.', 'success');
         UI.clearForm();
@@ -335,13 +353,13 @@ const App = {
         var record = {
           id: id,
           chassis: chassis,
+          model: model,
+          typeOfWork: typeOfWork,
+          counterSaleNumber: counterSaleNumber,
+          workOrderNumber: workOrderNumber,
           partNumber: partData.partNumber,
           partName: partData.partName,
-          model: partData.model,
           quantity: partData.quantity,
-          typeOfWork: partData.typeOfWork,
-          counterSaleNumber: partData.counterSaleNumber,
-          workOrderNumber: partData.workOrderNumber,
           availabilityStatus: partData.availabilityStatus,
           province: partData.province,
           createdDate: now,
