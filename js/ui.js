@@ -210,8 +210,8 @@ const UI = {
       if (p.partNumber) html += ' <span class="part-card-partno">(' + this._esc(p.partNumber) + ')</span>';
       html += ' <span class="part-card-qty">Qty: ' + p.quantity + '</span></div>';
       html += '<div class="part-card-actions">';
-      html += '<button class="btn btn-small btn-edit part-card-edit" data-index="' + i + '" title="Edit">&#9998;</button> ';
-      html += '<button class="btn btn-small btn-delete part-card-delete" data-index="' + i + '" title="Delete">&#128465;</button>';
+      html += '<button type="button" class="btn btn-small btn-edit part-card-edit" data-index="' + i + '" title="Edit">&#9998;</button> ';
+      html += '<button type="button" class="btn btn-small btn-delete part-card-delete" data-index="' + i + '" title="Delete">&#128465;</button>';
       html += '</div></div>';
     }
     container.innerHTML = html;
