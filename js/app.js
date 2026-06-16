@@ -106,6 +106,7 @@ const App = {
       if (this.actionRequiredFilter) {
         document.getElementById('filterReceived').value = 'all';
       }
+      document.getElementById('actionRequiredBtn').classList.toggle('toggle-on');
       UI.currentPage = 1;
       this.refresh();
     });

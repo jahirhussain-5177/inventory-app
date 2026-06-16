@@ -866,6 +866,10 @@ tbody tr {
   background: var(--success);
 }
 
+#actionRequiredBtn.toggle-on .toggle-slider {
+  background: #dc2626;
+}
+
 .toggle-on .toggle-slider::before {
   transform: translateX(16px);
 }
