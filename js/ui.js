@@ -465,7 +465,7 @@ const UI = {
   },
 
   isActionRequired(r) {
-    return !r.partNumber || !r.availabilityStatus || !r.received;
+    return !r.partNumber || !r.availabilityStatus;
   },
 
   getPaginatedRecords(records) {
