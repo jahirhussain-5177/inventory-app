@@ -466,10 +466,6 @@ const App = {
       receivedDateFrom: filters.receivedDateFrom,
       receivedDateTo: filters.receivedDateTo
     });
-    const actionCount = allRecords.filter(r => !r.availabilityStatus || !r.partNumber).length;
-    document.getElementById('actionCount').textContent = actionCount;
-    document.getElementById('actionRequiredBtn').classList.toggle('active', this.actionRequiredFilter);
-
     UI.renderTable(records);
   },
 
