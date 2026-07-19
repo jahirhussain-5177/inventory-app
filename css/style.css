@@ -817,6 +817,12 @@ tbody tr {
   border: 1px solid color-mix(in srgb, var(--warning) 25%, transparent);
 }
 
+.status-loss {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
 .toggle-col {
   text-align: center;
   width: 80px;

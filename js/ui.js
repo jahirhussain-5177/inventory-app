@@ -433,7 +433,7 @@ const UI = {
         <td data-label="Chassis">${this._esc(r.chassis)}</td>
         <td data-label="Type of Work">${this._esc(r.typeOfWork)}</td>
         <td data-label="${r.typeOfWork === 'Counter Sale' ? 'Counter Sale #' : r.typeOfWork === 'Work Order' ? 'Work Order #' : ''}">${r.typeOfWork === 'Counter Sale' ? this._esc(r.counterSaleNumber) : r.typeOfWork === 'Work Order' ? this._esc(r.workOrderNumber) : '-'}</td>
-        <td data-label="Availability">${r.availabilityStatus ? `<span class="status-badge ${r.availabilityStatus === 'Inside KSA' ? 'status-inside' : 'status-outside'}">${this._esc(r.availabilityStatus)}</span>` : ''}</td>
+        <td data-label="Availability">${r.availabilityStatus ? `<span class="status-badge ${r.availabilityStatus === 'Inside KSA' ? 'status-inside' : r.availabilityStatus === 'Loss of sales' ? 'status-loss' : 'status-outside'}">${this._esc(r.availabilityStatus)}</span>` : ''}</td>
         <td data-label="${r.availabilityStatus === 'Inside KSA' ? 'Province' : ''}">${r.availabilityStatus === 'Inside KSA' ? this._esc(r.province) : '-'}</td>
         <td class="date-col" data-label="Created">${r.createdDate}</td>
         <td class="toggle-col" data-label="Received">
